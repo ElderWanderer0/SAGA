@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Giriş ve Kayıt Ekranı</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='db_project.css') }}">
+</head>
+<body class="login-page">
+
+<div class="login-container">
+    <div id="login-box">
+        <h2>Giriş Yap</h2>
+        <form action="/login" method="POST">
+            <div class="input-group">
+                <label for="login-email">E-posta Adresi</label>
+                <input type="email" id="login-email" name="email" required>
+            </div>
+            <div class="input-group">
+                <label for="login-password">Şifre</label>
+                <input type="password" id="login-password" name="password" required>
+            </div>
+            <button type="submit" class="btn">Giriş</button>
+            <p class="switch-text">Hesabın yok mu? <a onclick="toggleForm()">Kayıt Ol</a></p>
+        </form>
+    </div>
+
+    <div id="register-box">
+        <h2>Kayıt Ol</h2>
+        <form action="/register" method="POST">
+            <div class="input-group">
+                <label for="reg-name">Ad Soyad</label>
+                <input type="text" id="reg-name" name="fullname" required>
+            </div>
+            <div class="input-group">
+                <label for="reg-email">E-posta Adresi</label>
+                <input type="email" id="reg-email" name="email" required>
+            </div>
+            <div class="input-group">
+                <label for="reg-password">Şifre</label>
+                <input type="password" id="reg-password" name="password" required>
+            </div>
+            <button type="submit" class="btn">Kayıt İşlemini Tamamla</button>
+            <p class="switch-text">Zaten bir hesabın var mı? <a onclick="toggleForm()">Giriş Yap</a></p>
+        </form>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='db_project.js') }}"></script>
+</body>
+</html>
