@@ -9,7 +9,7 @@ let currentInfoId = null; let currentInfoType = null; let isInfoOwnerGlobal = fa
 let currentResId = null; let currentResTotalPrice = 0;
 let currentResItemId = null; let currentResItemType = null;
 
-let currentPayType = null; let currentPayId = null;
+let currentPayType = null; let currentPayId = null; let appliedCouponCode = null;
 
 let currentCommentsData = [];
 let currentReviewsData = [];
@@ -28,6 +28,7 @@ function toggleSidebar() {
 }
 
 function loadContent(pageName) {
+    currentPageNameGlobal = pageName;
     fetch(`/api/content/${pageName}`).then(res => res.json()).then(data => {
         var dynamicContent = document.getElementById("dynamic-content"); var mainContent = document.getElementById("main-content"); 
         if(dynamicContent) {
@@ -47,9 +48,41 @@ function loadContent(pageName) {
                 loadAdminChatUsers();
             }
             
+            if(pageName === 'comparison') {
+                loadSavedComparisons();
+            }
+            
+            if(!isAdminGlobal) {
+                startGlobalNotificationCheck();
+            }
+
             let chatContainer = document.getElementById('live-chat-container');
             if(chatContainer) {
-                chatContainer.style.display = isAdminGlobal ? 'none' : 'block';
+                chatContainer.style.display = (!isAdminGlobal && pageName === 'support') ? 'block' : 'none';
+            }
+            
+            // Support sayfasına girildiyse bildirimleri temizle
+            if(pageName === 'support') {
+                let link = document.getElementById('sidebar-support-link');
+                if(link) {
+                    let dot = link.querySelector('.notification-dot');
+                    if(dot) dot.style.display = 'none';
+                }
+                
+                // Sayaçları güncelle (okundu say)
+                if(!isAdminGlobal) {
+                    fetch('/api/check_notifications').then(res => res.json()).then(data => {
+                        if(data.success) {
+                            lastSeenTicketReplyCount = data.ticket_count;
+                            localStorage.setItem('lastSeenTicketReplyCount', lastSeenTicketReplyCount);
+                            // Not: Chat sayacı sadece chat penceresi açılınca temizlenmeye devam eder (isteğe bağlı)
+                            // Ancak isterseniz burada lastSeenAdminMsgCount = data.chat_count da yapabilirsiniz.
+                            
+                            // Eğer okunmamış mesaj varsa, butona noktanın hemen geçmesi için manuel tetikliyoruz
+                            checkNotifications();
+                        }
+                    });
+                }
             }
         }
     });
@@ -75,10 +108,130 @@ function previewImage(event, targetId, textIdToHide = null) {
 }
 
 function submitArt() {
-    var title = document.getElementById('art-title').value; var desc = document.getElementById('art-desc').value; var price = document.getElementById('art-price').value; var fileInput = document.getElementById('art-file');
-    if (!title || !desc || !price || !fileInput.files[0]) return alert("Eksik alan var.");
-    var formData = new FormData(); formData.append('title', title); formData.append('desc', desc); formData.append('price', price); formData.append('art_image', fileInput.files[0]);
+    var title = document.getElementById('art-title').value; var cat = document.getElementById('art-cat').value; var desc = document.getElementById('art-desc').value; var price = document.getElementById('art-price').value; var fileInput = document.getElementById('art-file');
+    if (!title || !cat || !desc || !price || !fileInput.files[0]) return alert("Eksik alan var.");
+    var formData = new FormData(); formData.append('title', title); formData.append('category', cat); formData.append('desc', desc); formData.append('price', price); formData.append('art_image', fileInput.files[0]);
     fetch('/api/add_art', { method: 'POST', body: formData }).then(res => res.json()).then(data => { if(data.success) { closeAnyModal('art-modal'); loadContent('gallery'); } });
+}
+
+// --- KARŞILAŞTIRMA FONKSİYONLARI ---
+let currentCompType = null;
+let itemsToCompare = [];
+
+function openComparisonSelector(type) {
+    currentCompType = type;
+    const title = type === 'art' ? 'Karşılaştırılacak Eserleri Seçin' : 'Karşılaştırılacak Etkinlikleri Seçin';
+    document.getElementById('comp-selector-title').textContent = title;
+    
+    fetch(`/api/get_items_for_comparison/${type}`).then(res => res.json()).then(data => {
+        if(data.success) {
+            let html = '';
+            data.items.forEach(item => {
+                html += `
+                <div style="display:flex; align-items:center; gap:10px; padding:10px; border-bottom:1px solid #eee;">
+                    <input type="checkbox" class="comp-checkbox" value="${item.unique_id}" data-title="${item.title}">
+                    <span style="font-size:14px;">${item.title}</span>
+                </div>`;
+            });
+            document.getElementById('comp-selector-items').innerHTML = html || 'Öğe bulunamadı.';
+            openAnyModal('comp-selector-modal');
+        }
+    });
+}
+
+function startComparison() {
+    const checkboxes = document.querySelectorAll('.comp-checkbox:checked');
+    if(checkboxes.length < 2) return alert("En az 2 öğe seçmelisiniz.");
+    
+    const ids = Array.from(checkboxes).map(cb => cb.value);
+    renderComparisonTable(ids, currentCompType);
+    closeAnyModal('comp-selector-modal');
+}
+
+function renderComparisonTable(ids, type) {
+    fetch(`/api/get_items_for_comparison/${type}`).then(res => res.json()).then(data => {
+        if(!data.success) return;
+        const selectedItems = data.items.filter(item => ids.includes(item.unique_id) || ids.includes(String(item.id)));
+        
+        let html = '<table style="width:100%; border-collapse:collapse; background:white; border-radius:12px; overflow:hidden; box-shadow:0 5px 15px rgba(0,0,0,0.05);">';
+        
+        if(type === 'art') {
+            html += `
+                <tr style="background:#6a89cc; color:white;">
+                    <th style="padding:15px; text-align:left;">Özellik</th>
+                    ${selectedItems.map(item => `<th style="padding:15px;">${item.title}</th>`).join('')}
+                </tr>
+                <tr><td style="padding:15px; font-weight:bold; border-bottom:1px solid #eee;">Sanatçı</td>${selectedItems.map(item => `<td style="padding:15px; text-align:center; border-bottom:1px solid #eee;">${item.artist}</td>`).join('')}</tr>
+                <tr><td style="padding:15px; font-weight:bold; border-bottom:1px solid #eee;">Kategori</td>${selectedItems.map(item => `<td style="padding:15px; text-align:center; border-bottom:1px solid #eee;">${item.category}</td>`).join('')}</tr>
+                <tr><td style="padding:15px; font-weight:bold; border-bottom:1px solid #eee;">Fiyat</td>${selectedItems.map(item => `<td style="padding:15px; text-align:center; border-bottom:1px solid #eee; font-weight:bold; color:#27ae60;">${item.price} ₺</td>`).join('')}</tr>
+            `;
+        } else {
+            html += `
+                <tr style="background:#e67e22; color:white;">
+                    <th style="padding:15px; text-align:left;">Özellik</th>
+                    ${selectedItems.map(item => `<th style="padding:15px;">${item.title}</th>`).join('')}
+                </tr>
+                <tr><td style="padding:15px; font-weight:bold; border-bottom:1px solid #eee;">Tarih</td>${selectedItems.map(item => `<td style="padding:15px; text-align:center; border-bottom:1px solid #eee;">${item.date}</td>`).join('')}</tr>
+                <tr><td style="padding:15px; font-weight:bold; border-bottom:1px solid #eee;">Kontenjan</td>${selectedItems.map(item => `<td style="padding:15px; text-align:center; border-bottom:1px solid #eee;">${item.capacity} Kişi</td>`).join('')}</tr>
+                <tr><td style="padding:15px; font-weight:bold; border-bottom:1px solid #eee;">Ücret</td>${selectedItems.map(item => `<td style="padding:15px; text-align:center; border-bottom:1px solid #eee; font-weight:bold; color:#27ae60;">${item.price} ₺</td>`).join('')}</tr>
+            `;
+        }
+        
+        html += '</table>';
+        html += `
+            <div style="margin-top:20px; text-align:right;">
+                <input type="text" id="comp-save-title" placeholder="Karşılaştırma Başlığı" style="padding:10px; border-radius:6px; border:1px solid #ccc; width:250px; margin-right:10px;">
+                <button class="btn" style="width:auto; background:#27ae60;" onclick="saveCurrentComparison('${type}', [${ids.map(id => `'${id}'`).join(',')}])">Sonucu Kaydet</button>
+            </div>`;
+            
+        document.getElementById('comparison-result-area').innerHTML = html;
+    });
+}
+
+function saveCurrentComparison(type, ids) {
+    const title = document.getElementById('comp-save-title').value.trim();
+    if(!title) return alert("Lütfen bir başlık girin.");
+    
+    fetch('/api/save_comparison', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({type: type, ids: ids, title: title})
+    }).then(res => res.json()).then(data => {
+        if(data.success) {
+            alert("Karşılaştırma kaydedildi!");
+            loadSavedComparisons();
+        }
+    });
+}
+
+function loadSavedComparisons() {
+    fetch('/api/get_saved_comparisons').then(res => res.json()).then(data => {
+        if(data.success) {
+            let html = '';
+            data.comparisons.forEach(c => {
+                const typeLabel = c.comp_type === 'art' ? '🎨 Eser' : '📅 Etkinlik';
+                html += `
+                <div style="background:white; padding:15px; border-radius:10px; border:1px solid #eee; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong style="color:#2c3e50;">${c.title}</strong> <span style="font-size:12px; color:#888; margin-left:10px;">(${typeLabel})</span>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button class="btn" style="width:auto; padding:5px 15px; font-size:12px; background:#6a89cc;" onclick="renderComparisonTable('${c.item_ids}'.split(','), '${c.comp_type}')">Görüntüle</button>
+                        <button class="btn" style="width:auto; padding:5px 15px; font-size:12px; background:#ff4757;" onclick="deleteComparison(${c.id})">Sil</button>
+                    </div>
+                </div>`;
+            });
+            const container = document.getElementById('saved-comparisons-list');
+            if(container) container.innerHTML = html || '<p style="color:#aaa; text-align:center;">Henüz kayıtlı karşılaştırmanız yok.</p>';
+        }
+    });
+}
+
+function deleteComparison(id) {
+    if(!confirm("Bu karşılaştırmayı silmek istediğinize emin misiniz?")) return;
+    fetch(`/api/delete_comparison/${id}`, { method: 'POST' }).then(res => res.json()).then(data => {
+        if(data.success) loadSavedComparisons();
+    });
 }
 function submitWorkshop() {
     var title = document.getElementById('w-title').value; var date = document.getElementById('w-date').value; var time = document.getElementById('w-time').value; var price = document.getElementById('w-price').value; var capacity = document.getElementById('w-capacity').value; var desc = document.getElementById('w-desc').value; var fileInput = document.getElementById('w-file');
@@ -264,7 +417,7 @@ function deleteCurrentArt() { if(confirm('Eser silinecek. Emin misiniz?')) { fet
 
 function openInfoModal(id, type, title, desc, date, time, price, capacity, img, author, authorImg, isOwner, reservedTickets, isPast) {
     currentInfoId = id; currentInfoType = type; isInfoOwnerGlobal = isOwner;
-    document.getElementById('info-img').src = img; document.getElementById('info-title').textContent = title; document.getElementById('info-desc').textContent = desc; document.getElementById('info-datetime').innerHTML = date + "<br>" + time; document.getElementById('info-price').textContent = price + " ₺"; document.getElementById('info-author-name').textContent = author; document.getElementById('info-author-img').src = authorImg; document.getElementById('info-role').textContent = (type === 'workshop') ? 'Eğitmen' : 'Organizatör';
+    document.getElementById('info-img').src = img; document.getElementById('info-title').textContent = title; document.getElementById('info-desc').textContent = desc; document.getElementById('info-datetime').innerHTML = date + "<br>" + time; document.getElementById('info-price').textContent = price + " ₺"; document.getElementById('info-author-name').textContent = author; document.getElementById('info-author-img').src = authorImg; document.getElementById('info-role').textContent = (type === 'workshop' ? 'Eğitmen' : 'Organizatör');
     var ownerMenu = document.getElementById('info-owner-menu'); if(ownerMenu) ownerMenu.style.display = isOwner ? 'inline-block' : 'none';
     let remaining = capacity - (reservedTickets || 0); document.getElementById('info-capacity').textContent = remaining + " Kişi (Kalan)";
     
@@ -318,16 +471,61 @@ function postReview() {
 }
 function deleteReview(revId, type, itemId, containerId) { fetch('/api/delete_review/' + revId, { method: 'POST' }).then(res => res.json()).then(data => { if(data.success) fetchReviews(type, itemId, containerId); }); }
 
+function applyCoupon() {
+    let codeInput = document.getElementById('coupon-code');
+    let msg = document.getElementById('coupon-message');
+    let code = codeInput.value.trim().toUpperCase();
+    
+    if(!code) return;
+    
+    fetch('/api/apply_coupon', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({code: code})
+    }).then(res => res.json()).then(data => {
+        msg.textContent = data.message;
+        msg.style.display = 'block';
+        msg.style.color = data.success ? '#27ae60' : '#e74c3c';
+        
+        if(data.success) {
+            appliedCouponCode = code;
+            let amtEl = document.getElementById('payment-amount');
+            let baseAmount = parseFloat(amtEl.dataset.baseAmount);
+            let discounted = baseAmount * (1 - data.discount_rate);
+            
+            amtEl.innerHTML = `<span style="text-decoration: line-through; color:#aaa; font-size:18px; margin-right:8px;">${baseAmount.toFixed(2)} ₺</span><span style="color:#27ae60;">${discounted.toFixed(2)} ₺</span><div style="font-size:14px; color:#e67e22; margin-top:5px;">(Kupon Uygulandı)</div>`;
+            codeInput.disabled = true;
+        }
+    });
+}
+
 function openPaymentModal(type, id, amount) {
-    currentPayType = type; currentPayId = id; document.getElementById('payment-amount').textContent = amount + " ₺";
+    currentPayType = type; currentPayId = id; appliedCouponCode = null;
+    let amtEl = document.getElementById('payment-amount');
+    amtEl.dataset.baseAmount = amount;
+    amtEl.innerHTML = amount + " ₺";
+    
+    let codeInput = document.getElementById('coupon-code');
+    if(codeInput) {
+        codeInput.value = '';
+        codeInput.disabled = false;
+    }
+    let msg = document.getElementById('coupon-message');
+    if(msg) msg.style.display = 'none';
+
     if(type === 'art') closeAnyModal('art-detail-modal'); if(type === 'reservation') closeAnyModal('reservation-detail-modal');
     openAnyModal('payment-modal');
 }
 function confirmPayment() {
-    fetch('/api/process_payment', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: currentPayType, id: currentPayId }) }).then(res => res.json()).then(data => {
+    fetch('/api/process_payment', { 
+        method: 'POST', 
+        headers: { 'Content-Type': 'application/json' }, 
+        body: JSON.stringify({ type: currentPayType, id: currentPayId, coupon_code: appliedCouponCode }) 
+    }).then(res => res.json()).then(data => {
         alert(data.message); if(data.success) { closeAnyModal('payment-modal'); if(currentPayType === 'art') loadContent('purchases'); if(currentPayType === 'reservation') loadContent('reservations'); }
     });
 }
+
 function animateGallery() {
     if (!isGalleryActive) return;
     var canvas = document.getElementById('gallery-canvas'); var viewport = document.querySelector('.gallery-viewport');
@@ -354,15 +552,33 @@ function submitTicket(e) {
 
 // --- CANLI DESTEK FONKSİYONLARI ---
 let liveChatInterval;
+let globalNotificationInterval;
 let activeChatUserId = null;
+let lastSeenAdminMsgCount = parseInt(localStorage.getItem('lastSeenAdminMsgCount')) || 0;
+let lastSeenTicketReplyCount = parseInt(localStorage.getItem('lastSeenTicketReplyCount')) || 0;
+let currentPageNameGlobal = 'gallery';
 
 function toggleLiveChat() {
     let body = document.getElementById('live-chat-body');
     let container = document.getElementById('live-chat-container');
+    let header = document.getElementById('live-chat-header');
+    
     if(body.style.display === 'none') {
         body.style.display = 'flex';
         container.style.height = '400px';
         startChatPolling();
+        
+        // Chat bildirimini temizle (noktayı kaldır)
+        let dot = header.querySelector('.notification-dot');
+        if(dot) dot.style.display = 'none';
+        
+        // Chat sayacını güncelle
+        fetch('/api/check_notifications').then(res => res.json()).then(data => {
+            if(data.success) {
+                lastSeenAdminMsgCount = data.chat_count;
+                localStorage.setItem('lastSeenAdminMsgCount', lastSeenAdminMsgCount);
+            }
+        });
     } else {
         body.style.display = 'none';
         container.style.height = 'auto';
@@ -372,6 +588,7 @@ function toggleLiveChat() {
 
 function startChatPolling() {
     fetchChat();
+    if(liveChatInterval) clearInterval(liveChatInterval);
     liveChatInterval = setInterval(fetchChat, 3000);
 }
 
@@ -383,6 +600,54 @@ function fetchChat() {
     fetch('/api/get_chat').then(res => res.json()).then(data => {
         if(data.success) {
             renderChatMessages('live-chat-messages', data.messages);
+        }
+    });
+}
+
+function startGlobalNotificationCheck() {
+    if(globalNotificationInterval) clearInterval(globalNotificationInterval);
+    checkNotifications(); // İlk seferinde anında çalıştır
+    globalNotificationInterval = setInterval(checkNotifications, 5000);
+}
+
+function checkNotifications() {
+    if(isAdminGlobal) return;
+    
+    fetch('/api/check_notifications').then(res => res.json()).then(data => {
+        if(data.success) {
+            let hasNewChat = data.chat_count > lastSeenAdminMsgCount;
+            let hasNewTicket = data.ticket_count > lastSeenTicketReplyCount;
+            
+            if(hasNewChat || hasNewTicket) {
+                // Yeni bir şeyler var!
+                if(currentPageNameGlobal !== 'support') {
+                    // Sidebar linkine nokta koy
+                    let link = document.getElementById('sidebar-support-link');
+                    if(link) {
+                        let dot = link.querySelector('.notification-dot');
+                        if(!dot) link.innerHTML += ' <span class="notification-dot"></span>';
+                        else dot.style.display = 'inline-block';
+                    }
+                } else {
+                    // Sayfa support'taysa
+                    
+                    // 1. Eğer yeni bir TALEP yanıtı varsa, sidebar'daki noktayı temizle (çünkü zaten sayfadayız)
+                    // (loadContent zaten bunu yapıyor ama burada da garantiye alabiliriz)
+                    
+                    // 2. Eğer yeni bir CHAT mesajı varsa ve chat kapalıysa chat butonuna nokta koy
+                    if(hasNewChat) {
+                        let body = document.getElementById('live-chat-body');
+                        if(body && body.style.display === 'none') {
+                            let header = document.getElementById('live-chat-header');
+                            if(header) {
+                                let dot = header.querySelector('.notification-dot');
+                                if(!dot) header.innerHTML += ' <span class="notification-dot"></span>';
+                                else dot.style.display = 'inline-block';
+                            }
+                        }
+                    }
+                }
+            }
         }
     });
 }
@@ -479,5 +744,29 @@ function replyTicket(ticketId) {
     if(!replyText.trim()) return alert("Yanıt boş olamaz.");
     fetch('/api/reply_ticket', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ticket_id: ticketId, reply: replyText}) }).then(res => res.json()).then(data => {
         if(data.success) { loadContent('admin_panel'); }
+    });
+}
+
+function submitAdminCoupon() {
+    const select = document.getElementById('admin-coupon-users');
+    const selectedIds = Array.from(select.selectedOptions).map(opt => opt.value);
+    const code = document.getElementById('admin-coupon-name').value.trim();
+    const rate = document.getElementById('admin-coupon-rate').value;
+    const msg = document.getElementById('admin-coupon-message');
+    
+    if (selectedIds.length === 0) return alert("En az bir kullanıcı seçmelisiniz.");
+    if (!code) return alert("Kupon kodu girmelisiniz.");
+    
+    fetch('/api/admin/create_coupon', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user_ids: selectedIds, code: code, rate: rate})
+    }).then(res => res.json()).then(data => {
+        msg.textContent = data.message;
+        msg.style.color = data.success ? '#27ae60' : '#e74c3c';
+        if(data.success) {
+            document.getElementById('admin-coupon-name').value = '';
+            select.selectedIndex = -1; // Seçimleri temizle
+        }
     });
 }

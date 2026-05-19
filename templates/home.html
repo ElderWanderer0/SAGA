@@ -12,15 +12,7 @@
 
     <div id="sidebar" class="sidebar">
         <div class="sidebar-links">
-            <a href="#" onclick="loadContent('gallery')">Ana Sayfa</a>
-            <a href="#" onclick="loadContent('profile')">Profil</a>
-            <a href="#" onclick="loadContent('create')">Oluştur</a>
-            <a href="#" onclick="loadContent('favorites')">Favoriler</a>
-            <a href="#" onclick="loadContent('purchases')">Alınan Eserler</a>
-            <a href="#" onclick="loadContent('workshops')">Atölyeler</a>
-            <a href="#" onclick="loadContent('events')">Etkinlikler</a>
-            <a href="#" onclick="loadContent('reservations')">Rezervasyonlar</a>
-            <a href="#" onclick="loadContent('settings')">Ayarlar</a>
+            <!-- Linkler app.py üzerinden dinamik olarak gelecek -->
         </div>
     </div>
 
@@ -32,6 +24,7 @@
     </div>
 
     <!-- CANLI DESTEK KUTUCUĞU -->
+    {% if not session.is_admin %}
     <div id="live-chat-container" class="live-chat-container" style="display: none;">
         <div id="live-chat-header" class="live-chat-header" onclick="toggleLiveChat()">
             <span>💬 Canlı Destek</span>
@@ -46,6 +39,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <script src="{{ url_for('static', filename='db_project.js') }}"></script>
     <script>
