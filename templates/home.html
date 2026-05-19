@@ -11,7 +11,7 @@
     <div class="menu-btn" onclick="toggleSidebar()">&#9776;</div>
 
     <div id="sidebar" class="sidebar">
-        <div class="sidebar-top">
+        <div class="sidebar-links">
             <a href="#" onclick="loadContent('gallery')">Ana Sayfa</a>
             <a href="#" onclick="loadContent('profile')">Profil</a>
             <a href="#" onclick="loadContent('create')">Oluştur</a>
@@ -20,8 +20,6 @@
             <a href="#" onclick="loadContent('workshops')">Atölyeler</a>
             <a href="#" onclick="loadContent('events')">Etkinlikler</a>
             <a href="#" onclick="loadContent('reservations')">Rezervasyonlar</a>
-        </div>
-        <div class="sidebar-bottom">
             <a href="#" onclick="loadContent('settings')">Ayarlar</a>
         </div>
     </div>
@@ -33,7 +31,28 @@
         </div>
     </div>
 
+    <!-- CANLI DESTEK KUTUCUĞU -->
+    <div id="live-chat-container" class="live-chat-container" style="display: none;">
+        <div id="live-chat-header" class="live-chat-header" onclick="toggleLiveChat()">
+            <span>💬 Canlı Destek</span>
+        </div>
+        <div id="live-chat-body" class="live-chat-body" style="display: none;">
+            <div id="live-chat-messages" class="live-chat-messages">
+                <p style="font-size: 12px; color: #888; text-align: center;">Size nasıl yardımcı olabiliriz?</p>
+            </div>
+            <div class="live-chat-input-area">
+                <input type="text" id="live-chat-input" placeholder="Mesajınız..." onkeypress="if(event.key==='Enter') sendLiveChatMessage()">
+                <button onclick="sendLiveChatMessage()">🚀</button>
+            </div>
+        </div>
+    </div>
+
     <script src="{{ url_for('static', filename='db_project.js') }}"></script>
+    <script>
+        window.onload = function() {
+            loadContent('gallery');
+        };
+    </script>
 </body>
 </html>
 

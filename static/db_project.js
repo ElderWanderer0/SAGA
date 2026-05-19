@@ -2,6 +2,7 @@ let isGalleryActive = false; let galleryAnimationId;
 let panTarget = 0; let currentPan = 0; let autoPanSpeed = 1.0; 
 let isModalOpen = false; 
 
+let isAdminGlobal = false;
 let currentDetailArtId = null; let currentDetailArtPrice = 0; let isArtOwnerGlobal = false;
 let currentInfoId = null; let currentInfoType = null; let isInfoOwnerGlobal = false;
 
@@ -25,20 +26,36 @@ function toggleSidebar() {
     var sidebar = document.getElementById("sidebar"); var mainContent = document.getElementById("main-content");
     if (sidebar && mainContent) { sidebar.classList.toggle("active"); mainContent.classList.toggle("shifted"); }
 }
+
 function loadContent(pageName) {
     fetch(`/api/content/${pageName}`).then(res => res.json()).then(data => {
         var dynamicContent = document.getElementById("dynamic-content"); var mainContent = document.getElementById("main-content"); 
         if(dynamicContent) {
             dynamicContent.innerHTML = data.html;
+            isAdminGlobal = data.is_admin;
+            if (data.sidebar) {
+                var sidebarLinks = document.querySelector(".sidebar-links");
+                if (sidebarLinks) sidebarLinks.innerHTML = data.sidebar;
+            }
             if(pageName === 'gallery') {
                 mainContent.classList.add('gallery-mode'); isGalleryActive = true; panTarget = 0; currentPan = 0; autoPanSpeed = 1.0; animateGallery();
             } else {
                 mainContent.classList.remove('gallery-mode'); isGalleryActive = false; cancelAnimationFrame(galleryAnimationId);
             }
+            
+            if(pageName === 'admin_panel') {
+                loadAdminChatUsers();
+            }
+            
+            let chatContainer = document.getElementById('live-chat-container');
+            if(chatContainer) {
+                chatContainer.style.display = isAdminGlobal ? 'none' : 'block';
+            }
         }
     });
     if(window.innerWidth < 768) toggleSidebar();
 }
+
 function openAnyModal(modalId) { var modal = document.getElementById(modalId); if(modal) { modal.style.display = 'flex'; setTimeout(() => modal.classList.add('show'), 10); } }
 function closeAnyModal(modalId) { var modal = document.getElementById(modalId); if(modal) { modal.classList.remove('show'); setTimeout(() => modal.style.display = 'none', 300); } }
 
@@ -76,9 +93,6 @@ function submitEvent() {
     fetch('/api/add_event', { method: 'POST', body: formData }).then(res => res.json()).then(data => { if(data.success) { closeAnyModal('event-modal'); loadContent('events'); } });
 }
 
-// ==========================================
-// YORUM VE DEĞERLENDİRME LİSTELEME (FİLTRELİ)
-// ==========================================
 function fetchComments() {
     fetch(`/api/get_details/${currentDetailArtId}`).then(res => res.json()).then(data => {
         currentCommentsData = data.comments; currentUserGlobal = data.current_user_id; renderComments();
@@ -94,11 +108,11 @@ function renderComments() {
     if(sorted.length === 0) html = '<div style="color:#aaa; text-align:center; padding-top:20px;">İlk yorumu sen yap!</div>';
     
     sorted.forEach(c => {
-        var deleteMenu = (c.user_id === currentUserGlobal) ? `<div class="three-dots-menu" style="margin-left:auto;"><button class="three-dots-btn">⋮</button><div class="three-dots-content"><a href="#" style="color:red;" onclick="deleteComment(${c.id}); return false;">Sil</a></div></div>` : '';
-        var rateSelect = `<select style="margin-left:10px; padding:1px; font-size:11px;" onchange="rateItem('comment', ${c.id}, this.value)"><option>Puanla</option><option value="5">5 ⭐</option><option value="4">4 ⭐</option><option value="3">3 ⭐</option><option value="2">2 ⭐</option><option value="1">1 ⭐</option></select>`;
+        var deleteMenu = (c.user_id === currentUserGlobal && !isAdminGlobal) ? `<div class="three-dots-menu" style="margin-left:auto;"><button class="three-dots-btn">⋮</button><div class="three-dots-content"><a href="#" style="color:red;" onclick="deleteComment(${c.id}); return false;">Sil</a></div></div>` : '';
+        var rateSelect = (!isAdminGlobal && c.user_id !== currentUserGlobal) ? `<select style="margin-left:10px; padding:1px; font-size:11px;" onchange="rateItem('comment', ${c.id}, this.value)"><option>Puanla</option><option value="5">5 ⭐</option><option value="4">4 ⭐</option><option value="3">3 ⭐</option><option value="2">2 ⭐</option><option value="1">1 ⭐</option></select>` : '';
         var ratingBadge = c.rating > 0 ? `<span style="color:#f1c40f; font-size:12px; margin-left:5px;">⭐ ${c.rating}</span>` : `<span style="color:#ccc; font-size:12px; margin-left:5px;">(Puan Yok)</span>`;
         var ownerReplyHtml = c.reply ? `<div style="margin-top:8px; padding:8px; background:#e8effc; border-left:3px solid #6a89cc; font-size:12px;"><strong>Sanatçı Yanıtı:</strong> ${c.reply}</div>` : '';
-        var replyBtnHtml = (isArtOwnerGlobal && !c.reply) ? `<div style="margin-top:5px; text-align:right;"><button style="background:none; border:none; color:#6a89cc; cursor:pointer; font-size:11px; font-weight:bold;" onclick="showReplyInput('comment', ${c.id})">Yanıtla</button></div>` : '';
+        var replyBtnHtml = (isArtOwnerGlobal && !c.reply && !isAdminGlobal) ? `<div style="margin-top:5px; text-align:right;"><button style="background:none; border:none; color:#6a89cc; cursor:pointer; font-size:11px; font-weight:bold;" onclick="showReplyInput('comment', ${c.id})">Yanıtla</button></div>` : '';
         
         html += `
         <div style="display:flex; gap:10px; margin-bottom: 12px; align-items: flex-start; width: 100%;">
@@ -106,7 +120,7 @@ function renderComments() {
             <div style="background: #fff; padding: 8px 12px; border-radius: 12px; font-size:13px; border: 1px solid #eee; flex-grow:1;">
                 <div style="display:flex; align-items:center;">
                     <strong style="color:#444; font-size:12px;">${c.author}</strong>
-                    ${ratingBadge} ${c.user_id !== currentUserGlobal ? rateSelect : ''}
+                    ${ratingBadge} ${rateSelect}
                     ${deleteMenu}
                 </div>
                 <div style="margin-top:5px;">${c.text}</div>
@@ -135,11 +149,11 @@ function renderReviews(containerId) {
     if(sorted.length === 0) html = '<div style="color:#aaa; text-align:center; padding-top:10px;">Henüz değerlendirme yok.</div>';
     
     sorted.forEach(r => {
-        var deleteMenu = (r.user_id === currentUserGlobal) ? `<div class="three-dots-menu" style="margin-left:auto;"><button class="three-dots-btn">⋮</button><div class="three-dots-content"><a href="#" style="color:red;" onclick="deleteReview(${r.id}, '${currentInfoType}', ${currentInfoId}, '${containerId}'); return false;">Sil</a></div></div>` : '';
-        var rateSelect = `<select style="margin-left:10px; padding:1px; font-size:11px;" onchange="rateItem('review', ${r.id}, this.value)"><option>Puanla</option><option value="5">5 ⭐</option><option value="4">4 ⭐</option><option value="3">3 ⭐</option><option value="2">2 ⭐</option><option value="1">1 ⭐</option></select>`;
+        var deleteMenu = (r.user_id === currentUserGlobal && !isAdminGlobal) ? `<div class="three-dots-menu" style="margin-left:auto;"><button class="three-dots-btn">⋮</button><div class="three-dots-content"><a href="#" style="color:red;" onclick="deleteReview(${r.id}, '${currentInfoType}', ${currentInfoId}, '${containerId}'); return false;">Sil</a></div></div>` : '';
+        var rateSelect = (!isAdminGlobal && r.user_id !== currentUserGlobal) ? `<select style="margin-left:10px; padding:1px; font-size:11px;" onchange="rateItem('review', ${r.id}, this.value)"><option>Puanla</option><option value="5">5 ⭐</option><option value="4">4 ⭐</option><option value="3">3 ⭐</option><option value="2">2 ⭐</option><option value="1">1 ⭐</option></select>` : '';
         var ratingBadge = r.rating > 0 ? `<span style="color:#f1c40f; font-size:12px; margin-left:5px;">⭐ ${r.rating}</span>` : `<span style="color:#ccc; font-size:12px; margin-left:5px;">(Puan Yok)</span>`;
         var ownerReplyHtml = r.reply ? `<div style="margin-top:8px; padding:8px; background:#e8effc; border-left:3px solid #6a89cc; font-size:12px;"><strong>Organizatör Yanıtı:</strong> ${r.reply}</div>` : '';
-        var replyBtnHtml = (isInfoOwnerGlobal && !r.reply) ? `<div style="margin-top:5px; text-align:right;"><button style="background:none; border:none; color:#6a89cc; cursor:pointer; font-size:11px; font-weight:bold;" onclick="showReplyInput('review', ${r.id})">Yanıtla</button></div>` : '';
+        var replyBtnHtml = (isInfoOwnerGlobal && !r.reply && !isAdminGlobal) ? `<div style="margin-top:5px; text-align:right;"><button style="background:none; border:none; color:#6a89cc; cursor:pointer; font-size:11px; font-weight:bold;" onclick="showReplyInput('review', ${r.id})">Yanıtla</button></div>` : '';
         
         html += `
         <div style="display:flex; gap:10px; margin-bottom: 12px; align-items: flex-start; width: 100%;">
@@ -147,7 +161,7 @@ function renderReviews(containerId) {
             <div style="background: #fff; padding: 8px 12px; border-radius: 12px; font-size:13px; border: 1px solid #eee; flex-grow:1;">
                 <div style="display:flex; align-items:center;">
                     <strong style="color:#444; font-size:12px;">${r.author}</strong>
-                    ${ratingBadge} ${r.user_id !== currentUserGlobal ? rateSelect : ''}
+                    ${ratingBadge} ${rateSelect}
                     ${deleteMenu}
                 </div>
                 <div style="margin-top:5px;">${r.text}</div>
@@ -174,7 +188,6 @@ function sendReply(type, id) {
     .then(res => res.json()).then(data => { if(data.success) { if(type === 'comment') fetchComments(); else fetchReviews(currentInfoType, currentInfoId, 'info-reviews-container'); } });
 }
 
-// YENİ: YÖNETİCİ ÖZET RAPORU GETİRME
 function openSummaryReport() {
     var box = document.getElementById('summary-box');
     if(!box) return;
@@ -195,13 +208,32 @@ function openDetailModal(id, title, desc, price, img_path, author_name, author_i
     currentDetailArtId = id; currentDetailArtPrice = price; isArtOwnerGlobal = isOwner;
     document.getElementById('detail-img').src = img_path; document.getElementById('detail-title').textContent = title; document.getElementById('detail-desc').textContent = desc; document.getElementById('detail-price').textContent = price + " ₺"; document.getElementById('detail-author-name').textContent = author_name; document.getElementById('detail-author-img').src = author_img; document.getElementById('modal-like-count').textContent = like_count;
     var ownerMenu = document.getElementById('art-owner-menu'); if(ownerMenu) ownerMenu.style.display = isOwner ? 'inline-block' : 'none';
+    
     var buyBtn = document.getElementById('buy-btn'); var soldBadge = document.getElementById('sold-badge');
-    if (isSold) { buyBtn.style.display = 'none'; soldBadge.style.display = 'inline-block'; } else { soldBadge.style.display = 'none'; buyBtn.style.display = isOwner ? 'none' : 'inline-block'; }
+    var likeBtn = document.getElementById('like-btn'); var favBtn = document.getElementById('favorite-btn');
+    var commentInputArea = document.querySelector('.interaction-bar div:last-child'); 
+
+    if (isAdminGlobal) {
+        if(buyBtn) buyBtn.style.display = 'none';
+        if(likeBtn) likeBtn.style.display = 'none';
+        if(favBtn) favBtn.style.display = 'none';
+        if(commentInputArea) commentInputArea.style.display = 'none';
+        if(soldBadge) soldBadge.style.display = isSold ? 'inline-block' : 'none';
+    } else {
+        if (isSold) { buyBtn.style.display = 'none'; soldBadge.style.display = 'inline-block'; } 
+        else { soldBadge.style.display = 'none'; buyBtn.style.display = isOwner ? 'none' : 'inline-block'; }
+        if(likeBtn) likeBtn.style.display = 'inline-block';
+        if(favBtn) favBtn.style.display = 'inline-block';
+        if(commentInputArea) commentInputArea.style.display = 'flex';
+    }
+
     document.getElementById('new-comment').value = ''; document.getElementById('comments-container').innerHTML = 'Yükleniyor...';
     fetch(`/api/get_details/${id}`).then(res => res.json()).then(data => {
-        var likeBtn = document.getElementById('like-btn'); if (data.user_liked) likeBtn.innerHTML = `❤️ Beğendin (<span id="modal-like-count">${like_count}</span>)`; else likeBtn.innerHTML = `🤍 Beğen (<span id="modal-like-count">${like_count}</span>)`;
-        var favBtn = document.getElementById('favorite-btn'); if (data.user_favorited) favBtn.innerHTML = `📌 Favorilerden Çıkar`; else favBtn.innerHTML = `📌 Favoriye Ekle`;
-        fetchComments(); 
+        if (!isAdminGlobal) {
+            if (data.user_liked) likeBtn.innerHTML = `❤️ Beğendin (<span id="modal-like-count">${like_count}</span>)`; else likeBtn.innerHTML = `🤍 Beğen (<span id="modal-like-count">${like_count}</span>)`;
+            if (data.user_favorited) favBtn.innerHTML = `📌 Favorilerden Çıkar`; else favBtn.innerHTML = `📌 Favoriye Ekle`;
+        }
+        currentCommentsData = data.comments; currentUserGlobal = data.current_user_id; renderComments();
     });
     openAnyModal('art-detail-modal'); isModalOpen = true; 
 }
@@ -213,7 +245,6 @@ function toggleLike() {
         if(data.success) {
             var likeBtn = document.getElementById('like-btn'); if (data.liked) likeBtn.innerHTML = `❤️ Beğendin (<span id="modal-like-count">${data.new_count}</span>)`; else likeBtn.innerHTML = `🤍 Beğen (<span id="modal-like-count">${data.new_count}</span>)`;
             var floatingBadge = document.getElementById('badge-like-' + currentDetailArtId); 
-            // Görüntülenme ve Yorum verisini bozmamak için sadece ❤️ kısmını güncelliyoruz
             if(floatingBadge) floatingBadge.innerHTML = floatingBadge.innerHTML.replace(/❤️ \d+/, '❤️ ' + data.new_count);
         }
     });
@@ -237,12 +268,12 @@ function openInfoModal(id, type, title, desc, date, time, price, capacity, img, 
     var ownerMenu = document.getElementById('info-owner-menu'); if(ownerMenu) ownerMenu.style.display = isOwner ? 'inline-block' : 'none';
     let remaining = capacity - (reservedTickets || 0); document.getElementById('info-capacity').textContent = remaining + " Kişi (Kalan)";
     
-    // YÖNETİCİ ÖZET RAPOR KUTUSUNU GİZLE BAŞLAT
     var sumBox = document.getElementById('summary-box'); if(sumBox) sumBox.style.display = 'none';
 
     let reserveBox = document.getElementById('reservation-box');
     if(reserveBox) {
-        if (isPast) reserveBox.innerHTML = '<p style="color:#e74c3c; font-weight:bold; font-size:16px;">⏳ Bu etkinlik sona ermiştir.</p>';
+        if (isAdminGlobal) reserveBox.innerHTML = '<p style="color:#666;">Yöneticiler rezervasyon yapamazlar.</p>';
+        else if (isPast) reserveBox.innerHTML = '<p style="color:#e74c3c; font-weight:bold; font-size:16px;">⏳ Bu etkinlik sona ermiştir.</p>';
         else if (isOwner) reserveBox.innerHTML = '<p style="color:#666;">Kendi etkinliğinize rezervasyon yapamazsınız.</p>';
         else if (remaining <= 0) reserveBox.innerHTML = '<p style="color:red; font-weight:bold;">❌ Kontenjan Doldu</p>';
         else reserveBox.innerHTML = `<div style="display:flex; justify-content:center; gap:10px; align-items:center;"><label style="font-weight:bold; color:#555;">Kişi Sayısı:</label><input type="number" id="reserve-count" min="1" max="${remaining}" value="1" style="width:60px; padding:8px; border-radius:6px; border:1px solid #ccc;"><button class="btn" style="width:auto; padding:8px 20px; background:#27ae60;" onclick="reserveTickets()">Rezervasyon Yap</button></div>`;
@@ -309,3 +340,144 @@ function animateGallery() {
     galleryAnimationId = requestAnimationFrame(animateGallery);
 }
 function panGallery(direction) { panTarget += direction * 500; }
+
+function submitTicket(e) {
+    e.preventDefault();
+    var subject = document.getElementById('ticket-subject').value;
+    var message = document.getElementById('ticket-message').value;
+    if(!subject || !message) return;
+    fetch('/api/create_ticket', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({subject: subject, message: message}) }).then(res => res.json()).then(data => {
+        alert(data.message);
+        if(data.success) { loadContent('support'); }
+    });
+}
+
+// --- CANLI DESTEK FONKSİYONLARI ---
+let liveChatInterval;
+let activeChatUserId = null;
+
+function toggleLiveChat() {
+    let body = document.getElementById('live-chat-body');
+    let container = document.getElementById('live-chat-container');
+    if(body.style.display === 'none') {
+        body.style.display = 'flex';
+        container.style.height = '400px';
+        startChatPolling();
+    } else {
+        body.style.display = 'none';
+        container.style.height = 'auto';
+        stopChatPolling();
+    }
+}
+
+function startChatPolling() {
+    fetchChat();
+    liveChatInterval = setInterval(fetchChat, 3000);
+}
+
+function stopChatPolling() {
+    clearInterval(liveChatInterval);
+}
+
+function fetchChat() {
+    fetch('/api/get_chat').then(res => res.json()).then(data => {
+        if(data.success) {
+            renderChatMessages('live-chat-messages', data.messages);
+        }
+    });
+}
+
+function renderChatMessages(containerId, messages) {
+    let container = document.getElementById(containerId);
+    if(!container) return;
+    let html = '';
+    messages.forEach(m => {
+        let cls = m.is_from_admin ? 'admin' : 'user';
+        if(containerId === 'admin-chat-messages') {
+            cls = m.is_from_admin ? 'user' : 'admin';
+        }
+        html += `<div class="chat-msg ${cls}">${m.message}</div>`;
+    });
+    container.innerHTML = html || (containerId === 'live-chat-messages' ? '<p style="font-size: 12px; color: #888; text-align: center;">Size nasıl yardımcı olabiliriz?</p>' : '');
+    container.scrollTop = container.scrollHeight;
+}
+
+function sendLiveChatMessage() {
+    let input = document.getElementById('live-chat-input');
+    let msg = input.value.trim();
+    if(!msg) return;
+    fetch('/api/send_chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message: msg})
+    }).then(res => res.json()).then(data => {
+        if(data.success) {
+            input.value = '';
+            fetchChat();
+        }
+    });
+}
+
+function loadAdminChatUsers() {
+    fetch('/api/get_chat_users').then(res => res.json()).then(data => {
+        if(data.success) {
+            let container = document.getElementById('admin-chat-users');
+            if(!container) return;
+            let html = '';
+            data.users.forEach(u => {
+                let activeCls = (u.id === activeChatUserId) ? 'active' : '';
+                html += `
+                <div class="chat-user-item ${activeCls}" onclick="selectChatUser(${u.id}, this)" style="display:flex; gap:10px; align-items:center; padding:10px; border-radius:8px; cursor:pointer; margin-bottom:5px;">
+                    <img src="${u.img}" style="width:35px; height:35px; border-radius:50%; object-fit:cover;">
+                    <span style="font-size:14px; font-weight:bold;">${u.name}</span>
+                </div>`;
+            });
+            container.innerHTML = html || '<p style="text-align:center; color:#888; font-size:12px;">Henüz mesaj yok</p>';
+        }
+    });
+}
+
+function selectChatUser(userId, el) {
+    activeChatUserId = userId;
+    document.querySelectorAll('.chat-user-item').forEach(item => item.classList.remove('active'));
+    el.classList.add('active');
+    
+    document.getElementById('admin-chat-input-area').style.display = 'flex';
+    document.getElementById('admin-chat-messages').innerHTML = '<p style="text-align:center; color:#888;">Yükleniyor...</p>';
+    fetchAdminChat();
+    if(window.adminChatInterval) clearInterval(window.adminChatInterval);
+    window.adminChatInterval = setInterval(fetchAdminChat, 3000);
+}
+
+function fetchAdminChat() {
+    if(!activeChatUserId) return;
+    fetch('/api/get_chat/' + activeChatUserId).then(res => res.json()).then(data => {
+        if(data.success) {
+            renderChatMessages('admin-chat-messages', data.messages);
+        }
+    });
+}
+
+function sendAdminChatMessage() {
+    let input = document.getElementById('admin-chat-input');
+    let msg = input.value.trim();
+    if(!msg || !activeChatUserId) return;
+    fetch('/api/send_chat', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({user_id: activeChatUserId, message: msg})
+    }).then(res => res.json()).then(data => {
+        if(data.success) {
+            input.value = '';
+            fetchAdminChat();
+        }
+    });
+}
+
+function replyTicket(ticketId) {
+    var replyText = document.getElementById('admin-reply-' + ticketId).value;
+    if(!replyText.trim()) return alert("Yanıt boş olamaz.");
+    fetch('/api/reply_ticket', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ticket_id: ticketId, reply: replyText}) }).then(res => res.json()).then(data => {
+        if(data.success) { loadContent('admin_panel'); }
+    });
+}

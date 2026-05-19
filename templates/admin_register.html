@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yönetici Kaydı - Sanat Galerisi</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='db_project.css') }}">
+</head>
+<body class="login-page">
+    <div class="login-container">
+        <h2 style="color: #6a89cc;">Yönetici Kaydı</h2>
+        <form action="/admin/register" method="POST">
+            <div class="input-group">
+                <label>Ad Soyad</label>
+                <input type="text" name="fullname" placeholder="Adınız ve Soyadınız" required>
+            </div>
+            <div class="input-group">
+                <label>E-posta</label>
+                <input type="email" name="email" placeholder="admin@saga.com" required>
+            </div>
+            <div class="input-group">
+                <label>Şifre</label>
+                <input type="password" name="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn" style="background-color: #2c3e50;">Yönetici Hesabı Oluştur</button>
+            <p class="switch-text">Zaten hesabınız var mı? <a href="/">Giriş Yap</a></p>
+        </form>
+    </div>
+</body>
+</html>

@@ -590,5 +590,109 @@ textarea:focus { border-color: #7d8ea3; background-color: rgba(255, 255, 255, 0.
     display: block;
 }
 
+/* =========================================
+   CANLI DESTEK (FLOATING CHAT) STİLLERİ
+========================================= */
+.live-chat-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 300px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+    z-index: 5000;
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.live-chat-header {
+    background: #6a89cc;
+    color: #fff;
+    padding: 15px;
+    cursor: pointer;
+    font-weight: bold;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.live-chat-header:hover {
+    background: #5a74ae;
+}
+
+.live-chat-body {
+    height: 350px;
+    display: flex;
+    flex-direction: column;
+}
+
+.live-chat-messages {
+    flex-grow: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #f9f9f9;
+}
+
+.chat-msg {
+    max-width: 80%;
+    padding: 10px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.chat-msg.user {
+    align-self: flex-end;
+    background: #6a89cc;
+    color: #fff;
+    border-bottom-right-radius: 2px;
+}
+
+.chat-msg.admin {
+    align-self: flex-start;
+    background: #e1e1e1;
+    color: #333;
+    border-bottom-left-radius: 2px;
+}
+
+.live-chat-input-area {
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+    border-top: 1px solid #eee;
+}
+
+.live-chat-input-area input {
+    flex-grow: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    outline: none;
+}
+
+.live-chat-input-area button {
+    background: #6a89cc;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.chat-user-item:hover {
+    background: #eee;
+}
+.chat-user-item.active {
+    background: #6a89cc;
+    color: #fff;
+}
+
 
 
