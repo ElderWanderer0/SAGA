@@ -1,0 +1,594 @@
+/* =========================================
+   ORTAK SIFIRLAMALAR
+========================================= */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* =========================================
+   1. GİRİŞ VE KAYIT SAYFASI STİLLERİ
+========================================= */
+/* Arkaplan ve Sayfa Düzeni */
+body.login-page {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden; /* Dışarıya blurlu kenarların taşmasını önlemek için */
+}
+
+/* Tüm Arkaplanı Kaplayan Blurlu Fotoğraf */
+body.login-page::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    
+    /* ÖNEMLİ: Kendi fotoğrafının yolunu buraya yazmalısın. */
+    background-image: url('login_background.jpg'); 
+    
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    
+    /* Hafif bulanıklık efekti (tüm arkaplan için) */
+    filter: blur(5px); 
+    
+    /* Blurlu fotoğrafın kenarlarının beyaz görünmesini engellemek için hafifçe büyütelim */
+    transform: scale(1.11);
+    
+    /* Formun altında kalmasını sağlamak için */
+    z-index: -1;
+}
+
+.login-container {
+    /* İŞTE SİHİRLİ KISIM: Kusursuz Mutlak Ortalama */
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    
+    background-color: rgba(255, 255, 255, 0.45);
+    width: 420px;
+    padding: 50px;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(25px);
+    -webkit-backdrop-filter: blur(25px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.login-container h2 { text-align: center; margin-bottom: 30px; color: #444; font-weight: 700; }
+.input-group { margin-bottom: 25px; }
+.input-group label { display: block; margin-bottom: 10px; font-size: 15px; color: #555; font-weight: 500; }
+.input-group input { width: 100%; padding: 14px; border: 1px solid rgba(204, 204, 204, 0.3); border-radius: 6px; outline: none; background-color: rgba(255, 255, 255, 0.5); color: #333; transition: all 0.3s; }
+.input-group input:focus { border-color: #7d8ea3; background-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 3px rgba(125, 142, 163, 0.15); }
+.btn { width: 100%; padding: 14px; background-color: #6a89cc; color: #ffffff; border: none; border-radius: 6px; cursor: pointer; font-size: 17px; font-weight: bold; transition: background-color 0.3s, transform 0.1s; }
+.btn:hover { background-color: #5a74ae; }
+.btn:active { transform: scale(0.98); }
+.switch-text { text-align: center; margin-top: 25px; font-size: 14px; color: #666; }
+.switch-text a { color: #444; text-decoration: none; font-weight: 700; cursor: pointer; transition: color 0.3s; }
+.switch-text a:hover { color: #222; }
+#register-box { display: none; }
+
+/* =========================================
+   2. ANA SAYFA (SANAT GALERİSİ) STİLLERİ
+========================================= */
+body.home-page {
+    background-color: #f4f4f9;
+    color: #333;
+    display: flex;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.menu-btn { font-size: 30px; cursor: pointer; position: absolute; top: 20px; left: 20px; z-index: 1000; color: #444; transition: color 0.3s; }
+.menu-btn:hover { color: #6a89cc; }
+.sidebar { height: 100%; width: 250px; background-color: #ffffff; box-shadow: 2px 0 15px rgba(0,0,0,0.05); position: fixed; top: 0; left: -250px; transition: left 0.3s ease; display: flex; flex-direction: column; justify-content: space-between; padding-top: 80px; z-index: 999; }
+.sidebar.active { left: 0; }
+.sidebar a { padding: 15px 25px; text-decoration: none; font-size: 18px; color: #555; display: block; transition: background 0.2s, color 0.2s; }
+.sidebar a:hover { background-color: #f0f0f0; color: #6a89cc; border-left: 4px solid #6a89cc; }
+.sidebar-bottom { margin-bottom: 20px; }
+.main-content {
+    flex-grow: 1;
+    padding: 80px 40px 40px 40px;
+    transition: margin-left 0.3s ease, padding 0.3s ease; /* Yeni transition */
+    width: 100%;
+    overflow-y: auto;
+    position: relative;
+}
+.main-content.shifted { margin-left: 250px; }
+.content-box { background: #fff; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.03); animation: fadeIn 0.5s; }
+.main-content.gallery-mode {
+    padding: 0;
+    overflow: hidden; /* Scroll bar çıkmasın */
+}
+
+.main-content.gallery-mode #dynamic-content {
+    padding: 0;
+    background: transparent;
+    box-shadow: none;
+    border-radius: 0;
+    height: 100vh; /* Viewport yüksekliğini tamamen doldurur */
+    animation: none; /* Giriş animasyonunu devre dışı bırakır */
+}
+
+@keyframes fadeIn { 
+    from { opacity: 0; transform: translateY(10px); } 
+    to { opacity: 1; transform: translateY(0); } 
+}
+
+
+/* =========================================
+   3. PROFİL SAYFASI VE İKON SEÇİCİ STİLLERİ
+========================================= */
+.profile-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+/* =========================================
+   PROFİL FOTOĞRAFI TASARIMI (Tıklanabilir Çerçeve)
+========================================= */
+.profile-preview {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.main-avatar-frame {
+    width: 150px;
+    height: 150px;
+    border-radius: 50%;
+    border: 5px solid #fff;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    margin: 0 auto 15px;
+    position: relative; /* Overlay için önemli */
+    overflow: hidden;
+    cursor: pointer; /* Tıklanabilir olduğunu hissettirir */
+}
+
+.main-avatar-frame img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: filter 0.3s ease;
+}
+
+/* Üzerine gelince çıkan karartı efekti */
+.avatar-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 16px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.main-avatar-frame:hover .avatar-overlay {
+    opacity: 1; /* Mouse üstüne gelince görünür yap */
+}
+
+.main-avatar-frame:hover img {
+    filter: blur(2px); /* Resmi hafifçe bulanıklaştır */
+}
+
+.status-msg {
+    margin-top: 15px;
+    font-size: 14px;
+    font-weight: bold;
+    text-align: center;
+}
+
+
+/* =========================================
+   ESER EKLEME MODALI VE FORM TASARIMI
+========================================= */
+.create-page-header { text-align: center; margin-top: 20px; }
+.btn-add { width: auto; padding: 12px 30px; margin-top: 20px; display: inline-block; font-size: 16px; }
+
+/* Modal Arkaplanı (Blurlu ve Karanlık) */
+.modal-overlay {
+    display: none; /* Başlangıçta gizli */
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    backdrop-filter: blur(5px);
+    z-index: 2000;
+    justify-content: center; align-items: center;
+    opacity: 0; 
+    transition: opacity 0.3s ease;
+}
+
+/* Javascript ile 'show' class'ı eklendiğinde animasyon tetiklenir */
+.modal-overlay.show { opacity: 1; }
+
+/* Modal Ana Kutusu */
+.modal-content {
+    background: #fff; 
+    width: 850px; /* Geniş bir alan */
+    max-width: 90%;
+    padding: 40px; 
+    border-radius: 15px;
+    box-shadow: 0 15px 50px rgba(0,0,0,0.3);
+    position: relative;
+    /* Alttan yukarıya sıçrama animasyonu */
+    transform: scale(0.8) translateY(50px);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.modal-overlay.show .modal-content {
+    transform: scale(1) translateY(0);
+}
+
+.close-btn {
+    position: absolute; top: 20px; right: 25px;
+    font-size: 35px; color: #aaa; cursor: pointer; transition: color 0.3s;
+    line-height: 1;
+}
+.close-btn:hover { color: #e74c3c; }
+
+/* İçerik Düzeni: Sol ve Sağ İkiye Bölme */
+.art-form-layout { display: flex; gap: 40px; }
+
+/* SOL TARAF: Fotoğraf Alanı */
+.art-upload-left { flex: 1; }
+.dashed-upload-box {
+    width: 100%; height: 100%; min-height: 350px;
+    border: 3px dashed #ccc; border-radius: 12px;
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer; position: relative; overflow: hidden;
+    background: #fafafa; transition: all 0.3s ease; text-align: center;
+    color: #888; font-size: 20px; font-weight: bold;
+}
+.dashed-upload-box:hover { border-color: #6a89cc; background: #f0f4f8; color: #6a89cc; }
+.dashed-upload-box img { 
+    width: 100%; height: 100%; 
+    object-fit: cover; /* Resmi kutuya taşırmadan sığdırır */
+    position: absolute; top: 0; left: 0; z-index: 5; 
+}
+
+/* SAĞ TARAF: Form Alanı */
+.art-details-right { flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+
+.user-info { 
+    background: #f4f4f9; padding: 15px; border-radius: 8px; 
+    margin-bottom: 20px; border-left: 4px solid #6a89cc; 
+}
+.user-label { font-size: 13px; color: #666; display: block; margin-bottom: 5px;}
+.user-name { font-size: 18px; font-weight: bold; color: #333; }
+
+textarea { 
+    width: 100%; padding: 14px; border: 1px solid rgba(204, 204, 204, 0.3); 
+    border-radius: 6px; outline: none; background-color: rgba(255, 255, 255, 0.5); 
+    color: #333; resize: none; font-family: inherit; transition: all 0.3s;
+}
+textarea:focus { border-color: #7d8ea3; background-color: rgba(255, 255, 255, 0.8); box-shadow: 0 0 0 3px rgba(125, 142, 163, 0.15); }
+
+
+
+/* =========================================
+   GALERİ (PANORAMİK) TASARIMI VE SÜZÜLME EFEKTİ
+========================================= */
+
+/* Galeri sayfası açıldığında ana beyaz kutuyu şeffaflaştırıp tam ekran yapar */
+.content-box.no-padding {
+    padding: 0; background: transparent; box-shadow: none; overflow: visible;
+}
+
+/* =========================================
+   TAM EKRAN GALERİ (SÜZÜLME EFEKTİ)
+========================================= */
+
+/* Galeri açıldığında beyaz kutuyu tamamen şeffaflaştırıp ekranı kaplatıyoruz */
+.content-box.no-padding {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    padding: 0; border-radius: 0;
+    box-shadow: none; background: transparent;
+    z-index: 500; /* Sidebar'ın altında, arkaplanın üstünde */
+    overflow: hidden;
+}
+
+/* Tüm ekranı kaplayan sarmalayıcı */
+.fullscreen-gallery-wrapper {
+    position: relative;
+    width: 100%; height: 100%;
+    display: flex; align-items: center;
+    overflow: hidden;
+}
+
+/* Galerinin Tam Ekran Blurlu Arkaplanı */
+.gallery-blur-bg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    background-image: url('https://images.unsplash.com/photo-1579783900882-c0d3dad7b119?q=80&w=1200'); 
+    background-size: cover; background-position: center;
+    filter: blur(15px) brightness(0.5); 
+    transform: scale(1.1);
+    z-index: -1;
+}
+
+/* Sağa ve Sola Atlayış Okları */
+.pan-arrow {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    font-size: 60px; color: rgba(255,255,255,0.4);
+    cursor: pointer; z-index: 100; user-select: none;
+    padding: 30px; transition: all 0.3s ease;
+}
+.pan-arrow:hover { color: #fff; text-shadow: 0 0 20px rgba(255,255,255,0.9); transform: translateY(-50%) scale(1.1); }
+.pan-arrow.left { left: 20px; }
+.pan-arrow.right { right: 20px; }
+/* Eserlerin Bulunduğu Görüş Alanı */
+
+.gallery-viewport {
+    width: 100%; height: 100%;
+    overflow: hidden; 
+    z-index: 10;
+    position: relative;
+    display: flex; align-items: center;
+}
+
+/* Tuvalin kendisi artık position: relative oldu. Flex sildik çünkü içindekiler absolute */
+.gallery-canvas {
+    position: relative;
+    height: 100%;
+}
+
+/* Havada Süzülen Eser Çerçevesi */
+.floating-art-card {
+    /* Genişlik ve Yükseklik korundu, hover efekti korundu */
+    width: 320px; height: 420px; 
+    background: rgba(255,255,255,0.05);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 12px; padding: 20px;
+    cursor: pointer;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.6);
+    transition: filter 0.4s ease;
+}
+
+.floating-art-card:hover {
+    filter: brightness(1.2);
+    z-index: 50; 
+}
+
+.floating-art-card:hover .art-frame img { 
+    transform: scale(1.05); 
+}
+
+/* Eserin Kendisi */
+.art-frame {
+    width: 100%; height: 100%;
+    background: #000; border-radius: 8px; overflow: hidden;
+}
+.art-frame img {
+    width: 100%; height: 100%;
+    object-fit: cover; transition: transform 0.5s ease;
+}
+
+/* Sol Üstteki Profil Fotoğrafı Rozeti */
+.author-badge {
+    position: absolute; top: -25px; left: -25px;
+    width: 70px; height: 70px;
+    border-radius: 50%; border: 4px solid #fff;
+    object-fit: cover; z-index: 20;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+}
+
+/* Sadece Dikeyde Esneme Efekti (Yatay hareket JS ile sağlanıyor) */
+@keyframes floatY {
+    0% { transform: translateY(-30px); }
+    100% { transform: translateY(30px); }
+}
+
+
+/* =========================================
+   BEĞENİ ROZETİ (Akıştaki Eserlerin Sağ Altında)
+========================================= */
+.like-badge-floating {
+    position: absolute;
+    bottom: 15px;
+    right: 15px;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: bold;
+    z-index: 20;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    transition: all 0.3s;
+}
+
+.floating-art-card:hover .like-badge-floating {
+    transform: scale(1.1);
+    background: rgba(0, 0, 0, 0.8);
+}
+
+/* Yorum kısmı kaydırma çubuğu estetiği */
+.comments-section::-webkit-scrollbar {
+    width: 6px;
+}
+.comments-section::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+    border-radius: 10px;
+}
+.comments-section::-webkit-scrollbar-thumb {
+    background: #ccc; 
+    border-radius: 10px;
+}
+.comments-section::-webkit-scrollbar-thumb:hover {
+    background: #aaa; 
+}
+
+
+/* =========================================
+   OLUŞTUR SAYFASI YENİ KART SEÇENEKLERİ
+========================================= */
+.create-option-card {
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+    text-align: center;
+    cursor: pointer;
+    width: 250px;
+    border: 2px solid transparent;
+    transition: all 0.3s;
+}
+
+.create-option-card:hover {
+    transform: translateY(-10px);
+    border-color: #6a89cc;
+    box-shadow: 0 10px 25px rgba(106, 137, 204, 0.2);
+}
+
+.create-option-card h3 { color: #444; margin-bottom: 10px; }
+.create-option-card p { color: #777; font-size: 14px; }
+
+/* =========================================
+   ATÖLYE VE ETKİNLİK KART (GRID) TASARIMI
+========================================= */
+.info-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 30px;
+    margin-top: 30px;
+}
+
+.info-card {
+    position: relative;
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    transition: transform 0.3s;
+    display: flex;
+    flex-direction: column;
+}
+
+.info-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+}
+
+.info-card-img {
+    width: 100%;
+    height: 180px;
+    object-fit: cover;
+}
+
+.info-card-body {
+    padding: 20px;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.info-card-body h3 {
+    margin-bottom: 5px;
+    color: #333;
+}
+
+.info-card-body p {
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 15px;
+    flex-grow: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 3; /* Maksimum 3 satır gösterir */
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.info-card-footer {
+    display: flex;
+    justify-content: space-between;
+    background: #f8f9fa;
+    padding: 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: bold;
+    color: #555;
+    margin-top: auto;
+}
+
+
+/* =========================================
+   3 NOKTA (AÇILIR MENÜ) TASARIMI
+========================================= */
+.three-dots-menu {
+    position: relative;
+    display: inline-block;
+}
+
+.three-dots-btn {
+    background: transparent;
+    border: none;
+    font-size: 22px;
+    font-weight: bold;
+    color: #999;
+    cursor: pointer;
+    padding: 0 10px;
+    transition: color 0.3s;
+}
+
+.three-dots-btn:hover {
+    color: #333;
+}
+
+.three-dots-content {
+    display: none; 
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background-color: #ffffff;
+    min-width: 130px;
+    box-shadow: 0px 8px 25px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    overflow: hidden;
+    z-index: 1000;
+}
+
+.three-dots-content a {
+    color: #444;
+    padding: 12px 18px;
+    text-decoration: none;
+    display: block;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.2s;
+    text-align: left;
+}
+
+.three-dots-content a:hover {
+    background-color: #f1f3f8;
+}
+
+/* Yorumun veya Detay Sayfasının Üzerine Gelince Menü Açılsın */
+.three-dots-menu:hover .three-dots-content {
+    display: block;
+}
+
+
+
