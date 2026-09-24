@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanat Galerisi</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='db_project.css') }}">
+</head>
+<body class="home-page">
+
+    <div class="menu-btn" onclick="toggleSidebar()">&#9776;</div>
+
+    <div id="sidebar" class="sidebar">
+        <div class="sidebar-links">
+            <!-- Linkler app.py üzerinden dinamik olarak gelecek -->
+        </div>
+    </div>
+
+    <div id="main-content" class="main-content">
+        <div class="content-box" id="dynamic-content">
+            <h2>Sanat Galerisine Hoş Geldiniz</h2>
+            <p>Menüden bir seçenek seçerek sayfayı yenilemeden gezinmeye başlayabilirsiniz.</p>
+        </div>
+    </div>
+
+    <!-- CANLI DESTEK KUTUCUĞU -->
+    {% if not session.is_admin %}
+    <div id="live-chat-container" class="live-chat-container" style="display: none;">
+        <div id="live-chat-header" class="live-chat-header" onclick="toggleLiveChat()">
+            <span>💬 Canlı Destek</span>
+        </div>
+        <div id="live-chat-body" class="live-chat-body" style="display: none;">
+            <div id="live-chat-messages" class="live-chat-messages">
+                <p style="font-size: 12px; color: #888; text-align: center;">Size nasıl yardımcı olabiliriz?</p>
+            </div>
+            <div class="live-chat-input-area">
+                <input type="text" id="live-chat-input" placeholder="Mesajınız..." onkeypress="if(event.key==='Enter') sendLiveChatMessage()">
+                <button onclick="sendLiveChatMessage()">🚀</button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <script src="{{ url_for('static', filename='db_project.js') }}"></script>
+    <script>
+        window.onload = function() {
+            loadContent('gallery');
+        };
+    </script>
+</body>
+</html>
+
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+            
+    
